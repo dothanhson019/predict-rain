@@ -111,10 +111,12 @@ if input_mode == "Manual input":
 
         full_input = fill_missing_with_defaults(full_input)
         input_df = full_input[selected_features].copy()
-        input_df['RainToday'] = input_df['RainToday'].map({'Yes': 1, 'No': 0}) if isinstance(input_df['RainToday'].values[0], str) else input_df['RainToday']
+        if 'RainToday' in input_df.columns:
+            input_df['RainToday'] = input_df['RainToday'].map({'Yes': 1, 'No': 0})
 
+        # Chỉ encode những cột object khác (nếu có)
         for col in input_df.columns:
-            if col in label_encoders:
+            if col in label_encoders and input_df[col].dtype == object:
                 input_df[col] = label_encoders[col].transform(input_df[col].astype(str))
 
         X_scaled = scaler.transform(input_df)
@@ -145,10 +147,12 @@ else:
         except KeyError as e:
             st.error(f"❌ Missing required columns: {e}")
         else:
+           if 'RainToday' in input_df.columns:
             input_df['RainToday'] = input_df['RainToday'].map({'Yes': 1, 'No': 0})
 
+            # Chỉ encode những cột object khác (nếu có)
             for col in input_df.columns:
-                if col in label_encoders:
+                if col in label_encoders and input_df[col].dtype == object:
                     input_df[col] = label_encoders[col].transform(input_df[col].astype(str))
 
             X_scaled = scaler.transform(input_df)
