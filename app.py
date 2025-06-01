@@ -87,7 +87,7 @@ if submit:
 
     model = rf_model if model_type == "Random Forest" else dt_model
     prediction = model.predict(X_pca)[0]
-    result_label = rain_encoder.inverse_transform([prediction])[0] if rain_encoder else str(prediction)
-
+    result_label = {0: "No", 1: "Yes"}.get(prediction, str(prediction))
+    
     emoji = "☔" if prediction == 1 else "🌤️"
     st.success(f"🎯 Weather prediction result: **{emoji} {result_label}** (by {model_type})")
