@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-import requests
-from datetime import datetime
 
 st.set_page_config(page_title="🌧️ Predict Rain App", layout="centered")
 st.title("🌧️ Predict Rain (RainTomorrow)")
@@ -63,7 +61,7 @@ selected_features = [
 
 # === CHỌN CÁCH NHẬP DỮ LIỆU ===
 input_mode = st.radio("📅 How do you want to input data?", [
-    "Manual input", "Upload CSV file", "Fetch from WeatherAPI"
+    "Manual input", "Upload CSV file"
 ])
 def fill_missing_with_defaults(df):
     for col, default in default_values_full.items():
@@ -156,7 +154,7 @@ if input_mode == "Manual input":
     except Exception as e:
         st.error(f"❌ Error fetching weather: {e}")
         st.stop()
-elif input_mode == "Upload CSV file":
+else:
     uploaded_file = st.file_uploader("📁 Upload a CSV file with input data", type=["csv"])
     model_type = st.selectbox("🧠Select a model", ["Random Forest", "Decision Tree"])
 
@@ -196,105 +194,3 @@ elif input_mode == "Upload CSV file":
                 file_name="rain_prediction_result.csv",
                 mime="text/csv"
             )
-elif input_mode == "Fetch from WeatherAPI":
-    st.subheader("📡 Fetch real-time weather data")
-    city_name = st.text_input("Enter city name", value="Ho Chi Minh")
-    fetch = st.button("Fetch & Predict")
-
-    def convert_cloud_to_oktas(cloud_percent):
-        if cloud_percent is None:
-            return None
-        if cloud_percent == 0:
-            return 0
-        elif cloud_percent <= 12.5:
-            return 1
-        elif cloud_percent <= 25:
-            return 2
-        elif cloud_percent <= 37.5:
-            return 3
-        elif cloud_percent <= 50:
-            return 4
-        elif cloud_percent <= 62.5:
-            return 5
-        elif cloud_percent <= 75:
-            return 6
-        elif cloud_percent <= 87.5:
-            return 7
-        else:
-            return 8
-
-    use_historical = st.checkbox("📅 Use historical date?")
-    selected_date = st.date_input("Choose a date", value=datetime.today())
-
-    if fetch:
-        API_KEY = "92f14b27fd924631b7c183633250106"
-        try:
-            base_url = "http://api.weatherapi.com/v1"
-            endpoint = "history.json" if use_historical else "forecast.json"
-            params = {
-                "key": API_KEY,
-                "q": city_name,
-                "days": 1,
-                "aqi": "no",
-                "alerts": "no"
-            }
-            if use_historical:
-                params["dt"] = selected_date.strftime("%Y-%m-%d")
-
-            url = f"{base_url}/{endpoint}"
-            response = requests.get(url, params=params)
-            if response.status_code != 200:
-                st.error(f"❌ WeatherAPI Error {response.status_code}: {response.reason}")
-                st.stop()
-
-            res = response.json()
-            if "error" in res:
-                st.error(f"❌ WeatherAPI returned error: {res['error'].get('message', 'Unknown error')}")
-                st.stop()
-
-            current = res["current"] if not use_historical else None
-            day = res["forecast"]["forecastday"][0]["day"]
-            hours = res["forecast"]["forecastday"][0]["hour"]
-            h9 = next((h for h in hours if datetime.fromisoformat(h["time"]).hour == 9), None)
-            h15 = next((h for h in hours if datetime.fromisoformat(h["time"]).hour == 15), None)
-
-            weather_data = {
-                "MinTemp": day["mintemp_c"],
-                "Rainfall": day["totalprecip_mm"],
-                "RainToday": 1 if day["totalprecip_mm"] > 0 else 0,
-                "WindGustSpeed": (current or day)["maxwind_kph"] if use_historical else current["gust_kph"],
-                "WindSpeed9am": h9["wind_kph"] if h9 else None,
-                "WindSpeed3pm": h15["wind_kph"] if h15 else None,
-                "Humidity9am": h9["humidity"] if h9 else None,
-                "Humidity3pm": h15["humidity"] if h15 else None,
-                "Cloud9am": convert_cloud_to_oktas(h9["cloud"]) if h9 else None,
-                "Cloud3pm": convert_cloud_to_oktas(h15["cloud"]) if h15 else None
-            }
-
-            df_input = pd.DataFrame([weather_data])
-            st.write("📄 Weather data fetched:", df_input)
-
-            df_input = fill_missing_with_defaults(df_input)
-            input_df = df_input[selected_features]
-            input_df["RainToday"] = input_df["RainToday"].map({"Yes": 1, "No": 0}) if input_df["RainToday"].dtype == object else input_df["RainToday"]
-
-            for col in input_df.columns:
-                if col in label_encoders and input_df[col].dtype == object:
-                    input_df[col] = label_encoders[col].transform(input_df[col].astype(str))
-
-            X_scaled = scaler.transform(input_df)
-            X_pca = pca.transform(X_scaled)
-
-            model = rf_model
-            prediction = model.predict(X_pca)[0]
-            proba = model.predict_proba(X_pca)[0]
-            emoji = "☔" if prediction == 1 else "🌤️"
-            label = {0: "No", 1: "Yes"}[prediction]
-
-            st.success(f"🌦️ RainTomorrow prediction for {city_name} on {selected_date}: **{emoji} {label}**")
-            st.subheader("🧪 Probability:")
-            st.bar_chart({"No": proba[0], "Yes": proba[1]})
-
-        except Exception as e:
-            st.error(f"❌ Error fetching weather: {e}")
-            st.stop()
