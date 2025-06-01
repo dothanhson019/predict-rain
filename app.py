@@ -15,6 +15,10 @@ dt_model = joblib.load("saved_models/decision_tree_classifier_pca.joblib")
 label_encoders = joblib.load("saved_models/label_encoders.joblib")
 rain_encoder = label_encoders.get("RainTomorrow", None)
 
+# Load model accuracy
+accuracy_rf = joblib.load("saved_models/accuracy_rf.joblib")
+accuracy_dt = joblib.load("saved_models/accuracy_dt.joblib")
+
 # Tạo form nhập dữ liệu
 with st.form("input_form"):
     st.subheader("🔢 Input weather forecast data:")
@@ -89,5 +93,15 @@ if submit:
     prediction = model.predict(X_pca)[0]
     result_label = {0: "No", 1: "Yes"}.get(prediction, str(prediction))
     
+    accuracy = accuracy_rf if model_type == "Random Forest" else accuracy_dt
+    
     emoji = "☔" if prediction == 1 else "🌤️"
     st.success(f"🎯 Weather prediction result: **{emoji} {result_label}** (by {model_type})")
+    
+    # Hiện độ chính xác
+    st.info(f"📊 Model accuracy on test data: **{accuracy*100:.2f}%**")
+
+    # Hiện biểu đồ xác suất
+    proba = model.predict_proba(X_pca)[0]
+    st.subheader("🧪 Probability of RainTomorrow:")
+    st.bar_chart({"No": proba[0], "Yes": proba[1]})
