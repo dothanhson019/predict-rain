@@ -209,52 +209,69 @@ elif input_mode == "Fetch from WeatherAPI":
         else:
             return 8
 
+    use_historical = st.checkbox("📅 Use historical date?")
+    selected_date = st.date_input("Choose a date", value=datetime.today())
+
     if fetch:
         API_KEY = "92f14b27fd924631b7c183633250106"
         try:
-            url = "http://api.weatherapi.com/v1/forecast.json"
-            params = {'key': API_KEY, 'q': city_name, 'days': 1, 'aqi': 'no', 'alerts': 'no'}
-            forecast = requests.get(url, params=params).json()
-            current = forecast['current']
-            today = forecast['forecast']['forecastday'][0]['day']
-            hours = forecast['forecast']['forecastday'][0]['hour']
-            h9 = next((h for h in hours if datetime.fromisoformat(h['time']).hour == 9), None)
-            h15 = next((h for h in hours if datetime.fromisoformat(h['time']).hour == 15), None)
+            base_url = "http://api.weatherapi.com/v1"
+            endpoint = "history.json" if use_historical else "forecast.json"
+            params = {
+                "key": API_KEY,
+                "q": city_name,
+                "days": 1,
+                "aqi": "no",
+                "alerts": "no"
+            }
+            if use_historical:
+                params["dt"] = selected_date.strftime("%Y-%m-%d")
 
-            data = {
-                "MinTemp": today['mintemp_c'],
-                "Rainfall": today['totalprecip_mm'],
-                "RainToday": 1 if today['totalprecip_mm'] > 0 else 0,
-                "WindGustSpeed": current['gust_kph'],
-                "WindSpeed9am": h9['wind_kph'] if h9 else None,
-                "WindSpeed3pm": h15['wind_kph'] if h15 else None,
-                "Humidity9am": h9['humidity'] if h9 else None,
-                "Humidity3pm": h15['humidity'] if h15 else None,
-                "Cloud9am": convert_cloud_to_oktas(h9['cloud']) if h9 else None,
-                "Cloud3pm": convert_cloud_to_oktas(h15['cloud']) if h15 else None
+            url = f"{base_url}/{endpoint}"
+            res = requests.get(url, params=params).json()
+
+            current = res["current"] if not use_historical else None
+            day = res["forecast"]["forecastday"][0]["day"]
+            hours = res["forecast"]["forecastday"][0]["hour"]
+            h9 = next((h for h in hours if datetime.fromisoformat(h["time"]).hour == 9), None)
+            h15 = next((h for h in hours if datetime.fromisoformat(h["time"]).hour == 15), None)
+
+            weather_data = {
+                "MinTemp": day["mintemp_c"],
+                "Rainfall": day["totalprecip_mm"],
+                "RainToday": 1 if day["totalprecip_mm"] > 0 else 0,
+                "WindGustSpeed": (current or day)["maxwind_kph"] if use_historical else current["gust_kph"],
+                "WindSpeed9am": h9["wind_kph"] if h9 else None,
+                "WindSpeed3pm": h15["wind_kph"] if h15 else None,
+                "Humidity9am": h9["humidity"] if h9 else None,
+                "Humidity3pm": h15["humidity"] if h15 else None,
+                "Cloud9am": convert_cloud_to_oktas(h9["cloud"]) if h9 else None,
+                "Cloud3pm": convert_cloud_to_oktas(h15["cloud"]) if h15 else None
             }
 
-            df_input = pd.DataFrame([data])
+            df_input = pd.DataFrame([weather_data])
+            st.write("📄 Weather data fetched:", df_input)
+
             df_input = fill_missing_with_defaults(df_input)
-            st.write("📄 Fetched weather data:", df_input)
+            input_df = df_input[selected_features]
+            input_df["RainToday"] = input_df["RainToday"].map({"Yes": 1, "No": 0}) if input_df["RainToday"].dtype == object else input_df["RainToday"]
 
-            X = df_input[selected_features]
-            X["RainToday"] = X["RainToday"].map({"Yes": 1, "No": 0}) if X["RainToday"].dtype == object else X["RainToday"]
-            for col in X.columns:
-                if col in label_encoders and X[col].dtype == object:
-                    X[col] = label_encoders[col].transform(X[col].astype(str))
+            for col in input_df.columns:
+                if col in label_encoders and input_df[col].dtype == object:
+                    input_df[col] = label_encoders[col].transform(input_df[col].astype(str))
 
-            X_scaled = scaler.transform(X)
+            X_scaled = scaler.transform(input_df)
             X_pca = pca.transform(X_scaled)
+
             model = rf_model
             prediction = model.predict(X_pca)[0]
             proba = model.predict_proba(X_pca)[0]
             emoji = "☔" if prediction == 1 else "🌤️"
             label = {0: "No", 1: "Yes"}[prediction]
 
-            st.success(f"🌦️ RainTomorrow prediction for {city_name}: **{emoji} {label}**")
+            st.success(f"🌦️ RainTomorrow prediction for {city_name} on {selected_date}: **{emoji} {label}**")
             st.subheader("🧪 Probability:")
             st.bar_chart({"No": proba[0], "Yes": proba[1]})
 
         except Exception as e:
-            st.error(f"❌ Error: {e}")
+            st.error(f"❌ Error fetching weather: {e}")
