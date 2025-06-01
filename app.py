@@ -20,7 +20,7 @@ accuracy_dt = joblib.load("saved_models/accuracy_dt.joblib")
 # Default values for all possible inputs
 default_values_full = {
     "Location": "Sydney",
-    "MinTemp": 15.0,
+    "MinTemp": 12.0,
     "MaxTemp": 23.0,
     "Rainfall": 0.0,
     "Evaporation": 3.2,
