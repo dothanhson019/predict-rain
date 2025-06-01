@@ -5,7 +5,7 @@ import numpy as np
 import joblib
 
 st.set_page_config(page_title="🌧️ Predict Rain App", layout="centered")
-st.title("🌧️ Dự đoán trời mưa (RainTomorrow)")
+st.title("🌧️ Predict Rain (RainTomorrow)")
 
 # Load models and encoders
 scaler = joblib.load("saved_models/scaler.joblib")
@@ -56,11 +56,15 @@ if submit:
         'Pressure9am', 'Pressure3pm', 'Cloud9am', 'Cloud3pm',
         'Temp9am', 'Temp3pm', 'RainToday'
     ])
+    # Map 'Yes'/'No' to 1/0 for binary columns
+    if 'RainToday' in input_df.columns:
+        input_df['RainToday'] = input_df['RainToday'].map({'Yes': 1, 'No': 0})
 
     for col in input_df.columns:
         if col in label_encoders:
             input_df[col] = label_encoders[col].transform(input_df[col].astype(str))
-
+    
+    # Scale and PCA
     X_scaled = scaler.transform(input_df)
     X_pca = pca.transform(X_scaled)
 
@@ -69,4 +73,4 @@ if submit:
     result_label = rain_encoder.inverse_transform([prediction])[0] if rain_encoder else str(prediction)
 
     emoji = "☔" if prediction == 1 else "🌤️"
-    st.success(f"🎯 Kết quả dự đoán: **{{emoji}} {{result_label}}** (bằng {{model_type}})")
+    st.success(f"🎯 Weather prediction result: **{{emoji}} {{result_label}}** (by {{model_type}})")
