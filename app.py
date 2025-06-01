@@ -69,8 +69,8 @@ if submit:
 
     # Chọn đúng 10 feature có tương quan dương, đúng thứ tự huấn luyện
     selected_features = [
-        'Humidity3pm' 'RainToday' 'Cloud3pm' 'Humidity9am' 'Cloud9am' 'Rainfall'
-        'WindGustSpeed' 'WindSpeed9am' 'WindSpeed3pm' 'MinTemp'    
+    "Humidity3pm", "RainToday", "Cloud3pm", "Humidity9am", "Cloud9am",
+    "Rainfall", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", "MinTemp"
     ]
     input_df = full_input[selected_features].copy()
 
