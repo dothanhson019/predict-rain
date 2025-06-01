@@ -9,15 +9,26 @@ st.set_page_config(page_title="🌧️ Predict Rain App", layout="centered")
 st.title("🌧️ Predict Rain (RainTomorrow)")
 
 # Load models and encoders
-scaler = joblib.load("saved_models/scaler.joblib")
-pca = joblib.load("saved_models/pca_transformer.joblib")
-rf_model = joblib.load("saved_models/random_forest_classifier_pca.joblib")
-dt_model = joblib.load("saved_models/decision_tree_classifier_pca.joblib")
-label_encoders = joblib.load("saved_models/label_encoders.joblib")
-rain_encoder = label_encoders.get("RainTomorrow", None)
+s@st.cache_resource
+def load_models():
+    return {
+        "scaler": joblib.load("saved_models/scaler.joblib"),
+        "pca": joblib.load("saved_models/pca_transformer.joblib"),
+        "rf": joblib.load("saved_models/random_forest_classifier_pca.joblib"),
+        "dt": joblib.load("saved_models/decision_tree_classifier_pca.joblib"),
+        "encoders": joblib.load("saved_models/label_encoders.joblib"),
+        "acc_rf": joblib.load("saved_models/accuracy_rf.joblib"),
+        "acc_dt": joblib.load("saved_models/accuracy_dt.joblib"),
+    }
 
-accuracy_rf = joblib.load("saved_models/accuracy_rf.joblib")
-accuracy_dt = joblib.load("saved_models/accuracy_dt.joblib")
+models = load_models()
+scaler = models["scaler"]
+pca = models["pca"]
+rf_model = models["rf"]
+dt_model = models["dt"]
+label_encoders = models["encoders"]
+accuracy_rf = models["acc_rf"]
+accuracy_dt = models["acc_dt"]
 
 # Default values for all possible inputs
 default_values_full = {
@@ -66,82 +77,85 @@ if input_mode == "Manual input":
             return float(value)
         except ValueError:
             return None
-    with st.form("input_form"):
-        st.subheader("🔢 Input weather forecast data:")
-        location = st.text_input("Location", "")
-        min_temp = parse_float(st.text_input("MinTemp (°C)", ""))
-        max_temp = parse_float(st.text_input("MaxTemp (°C)", ""))
-        rainfall = parse_float(st.text_input("Rainfall (mm)", ""))
-        evaporation = parse_float(st.text_input("Evaporation (mm)", ""))
-        sunshine = parse_float(st.text_input("Sunshine (hours)", ""))
-        wind_gust_dir = st.text_input("WindGustDir", "NW")
-        wind_gust_speed = parse_float(st.text_input("WindGustSpeed", ""))
-        wind_dir_9am = st.text_input("WindDir9am", "WNW")
-        wind_dir_3pm = st.text_input("WindDir3pm", "WNW")
-        wind_speed_9am = parse_float(st.text_input("WindSpeed9am", ""))
-        wind_speed_3pm = parse_float(st.text_input("WindSpeed3pm", ""))
-        humidity_9am = parse_float(st.text_input("Humidity9am (%)", ""))
-        humidity_3pm = parse_float(st.text_input("Humidity3pm (%)", ""))
-        pressure_9am = parse_float(st.text_input("Pressure9am (hPa)", ""))
-        pressure_3pm = parse_float(st.text_input("Pressure3pm (hPa)", ""))
-        cloud_9am = parse_float(st.text_input("Cloud9am (0-8)", ""))
-        cloud_3pm = parse_float(st.text_input("Cloud3pm (0-8)", ""))
-        temp_9am = parse_float(st.text_input("Temp9am (°C)", ""))
-        temp_3pm = parse_float(st.text_input("Temp3pm (°C)", ""))
-        rain_today = st.selectbox("RainToday", ["", "Yes", "No"])
-        model_type = st.selectbox("🧠Select a model", ["Random Forest", "Decision Tree"])
-        submit = st.form_submit_button("Predict")
+    try:
+        with st.form("input_form"):
+            st.subheader("🔢 Input weather forecast data:")
+            location = st.text_input("Location", "")
+            min_temp = parse_float(st.text_input("MinTemp (°C)", ""))
+            max_temp = parse_float(st.text_input("MaxTemp (°C)", ""))
+            rainfall = parse_float(st.text_input("Rainfall (mm)", ""))
+            evaporation = parse_float(st.text_input("Evaporation (mm)", ""))
+            sunshine = parse_float(st.text_input("Sunshine (hours)", ""))
+            wind_gust_dir = st.text_input("WindGustDir", "NW")
+            wind_gust_speed = parse_float(st.text_input("WindGustSpeed", ""))
+            wind_dir_9am = st.text_input("WindDir9am", "WNW")
+            wind_dir_3pm = st.text_input("WindDir3pm", "WNW")
+            wind_speed_9am = parse_float(st.text_input("WindSpeed9am", ""))
+            wind_speed_3pm = parse_float(st.text_input("WindSpeed3pm", ""))
+            humidity_9am = parse_float(st.text_input("Humidity9am (%)", ""))
+            humidity_3pm = parse_float(st.text_input("Humidity3pm (%)", ""))
+            pressure_9am = parse_float(st.text_input("Pressure9am (hPa)", ""))
+            pressure_3pm = parse_float(st.text_input("Pressure3pm (hPa)", ""))
+            cloud_9am = parse_float(st.text_input("Cloud9am (0-8)", ""))
+            cloud_3pm = parse_float(st.text_input("Cloud3pm (0-8)", ""))
+            temp_9am = parse_float(st.text_input("Temp9am (°C)", ""))
+            temp_3pm = parse_float(st.text_input("Temp3pm (°C)", ""))
+            rain_today = st.selectbox("RainToday", ["", "Yes", "No"])
+            model_type = st.selectbox("🧠Select a model", ["Random Forest", "Decision Tree"])
+            submit = st.form_submit_button("Predict")
 
-    if submit:
-        full_input = pd.DataFrame([{k: v for k, v in {
-            "Location": location,
-            "MinTemp": min_temp,
-            "MaxTemp": max_temp,
-            "Rainfall": rainfall,
-            "Evaporation": evaporation,
-            "Sunshine": sunshine,
-            "WindGustDir": wind_gust_dir,
-            "WindGustSpeed": wind_gust_speed,
-            "WindDir9am": wind_dir_9am,
-            "WindDir3pm": wind_dir_3pm,
-            "WindSpeed9am": wind_speed_9am,
-            "WindSpeed3pm": wind_speed_3pm,
-            "Humidity9am": humidity_9am,
-            "Humidity3pm": humidity_3pm,
-            "Pressure9am": pressure_9am,
-            "Pressure3pm": pressure_3pm,
-            "Cloud9am": cloud_9am,
-            "Cloud3pm": cloud_3pm,
-            "Temp9am": temp_9am,
-            "Temp3pm": temp_3pm,
-            "RainToday": rain_today
-        }.items()}])
+        if submit:
+            full_input = pd.DataFrame([{k: v for k, v in {
+                "Location": location,
+                "MinTemp": min_temp,
+                "MaxTemp": max_temp,
+                "Rainfall": rainfall,
+                "Evaporation": evaporation,
+                "Sunshine": sunshine,
+                "WindGustDir": wind_gust_dir,
+                "WindGustSpeed": wind_gust_speed,
+                "WindDir9am": wind_dir_9am,
+                "WindDir3pm": wind_dir_3pm,
+                "WindSpeed9am": wind_speed_9am,
+                "WindSpeed3pm": wind_speed_3pm,
+                "Humidity9am": humidity_9am,
+                "Humidity3pm": humidity_3pm,
+                "Pressure9am": pressure_9am,
+                "Pressure3pm": pressure_3pm,
+                "Cloud9am": cloud_9am,
+                "Cloud3pm": cloud_3pm,
+                "Temp9am": temp_9am,
+                "Temp3pm": temp_3pm,
+                "RainToday": rain_today
+            }.items()}])
 
-        full_input = fill_missing_with_defaults(full_input)
-        input_df = full_input[selected_features].copy()
-        if 'RainToday' in input_df.columns:
-            input_df['RainToday'] = input_df['RainToday'].map({'Yes': 1, 'No': 0})
+            full_input = fill_missing_with_defaults(full_input)
+            input_df = full_input[selected_features].copy()
+            if 'RainToday' in input_df.columns:
+                input_df['RainToday'] = input_df['RainToday'].map({'Yes': 1, 'No': 0})
 
-        # Chỉ encode những cột object khác (nếu có)
-        for col in input_df.columns:
-            if col in label_encoders and input_df[col].dtype == object:
-                input_df[col] = label_encoders[col].transform(input_df[col].astype(str))
+            # Chỉ encode những cột object khác (nếu có)
+            for col in input_df.columns:
+                if col in label_encoders and input_df[col].dtype == object:
+                    input_df[col] = label_encoders[col].transform(input_df[col].astype(str))
 
-        X_scaled = scaler.transform(input_df)
-        X_pca = pca.transform(X_scaled)
+            X_scaled = scaler.transform(input_df)
+            X_pca = pca.transform(X_scaled)
 
-        model = rf_model if model_type == "Random Forest" else dt_model
-        accuracy = accuracy_rf if model_type == "Random Forest" else accuracy_dt
-        prediction = model.predict(X_pca)[0]
-        result_label = {0: "No", 1: "Yes"}.get(prediction, str(prediction))
-        emoji = "☔" if prediction == 1 else "🌤️"
+            model = rf_model if model_type == "Random Forest" else dt_model
+            accuracy = accuracy_rf if model_type == "Random Forest" else accuracy_dt
+            prediction = model.predict(X_pca)[0]
+            result_label = {0: "No", 1: "Yes"}.get(prediction, str(prediction))
+            emoji = "☔" if prediction == 1 else "🌤️"
 
-        st.success(f"🌟 Weather prediction result: **{emoji} {result_label}** (by {model_type})")
-        st.info(f"📊 Model accuracy on test data: **{accuracy*100:.2f}%**")
-        proba = model.predict_proba(X_pca)[0]
-        st.subheader("🧪 Probability of RainTomorrow:")
-        st.bar_chart({"No": proba[0], "Yes": proba[1]})
-
+            st.success(f"🌟 Weather prediction result: **{emoji} {result_label}** (by {model_type})")
+            st.info(f"📊 Model accuracy on test data: **{accuracy*100:.2f}%**")
+            proba = model.predict_proba(X_pca)[0]
+            st.subheader("🧪 Probability of RainTomorrow:")
+            st.bar_chart({"No": proba[0], "Yes": proba[1]})
+        except Exception as e:
+            st.error(f"❌ Error fetching weather: {e}")
+            st.stop()
 elif input_mode == "Upload CSV file":
     uploaded_file = st.file_uploader("📁 Upload a CSV file with input data", type=["csv"])
     model_type = st.selectbox("🧠Select a model", ["Random Forest", "Decision Tree"])
@@ -275,3 +289,4 @@ elif input_mode == "Fetch from WeatherAPI":
 
         except Exception as e:
             st.error(f"❌ Error fetching weather: {e}")
+            st.stop()
