@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+import requests
+from datetime import datetime
 
 st.set_page_config(page_title="🌧️ Predict Rain App", layout="centered")
 st.title("🌧️ Predict Rain (RainTomorrow)")
@@ -49,8 +51,9 @@ selected_features = [
 ]
 
 # === CHỌN CÁCH NHẬP DỮ LIỆU ===
-input_mode = st.radio("📅 How do you want to input data?", ["Manual input", "Upload CSV file"])
-
+input_mode = st.radio("📅 How do you want to input data?", [
+    "Manual input", "Upload CSV file", "Fetch from WeatherAPI"
+])
 def fill_missing_with_defaults(df):
     for col, default in default_values_full.items():
         if col in df.columns:
@@ -139,7 +142,7 @@ if input_mode == "Manual input":
         st.subheader("🧪 Probability of RainTomorrow:")
         st.bar_chart({"No": proba[0], "Yes": proba[1]})
 
-else:
+elif input_mode == "Upload CSV file":
     uploaded_file = st.file_uploader("📁 Upload a CSV file with input data", type=["csv"])
     model_type = st.selectbox("🧠Select a model", ["Random Forest", "Decision Tree"])
 
@@ -179,3 +182,79 @@ else:
                 file_name="rain_prediction_result.csv",
                 mime="text/csv"
             )
+elif input_mode == "Fetch from WeatherAPI":
+    st.subheader("📡 Fetch real-time weather data")
+    city_name = st.text_input("Enter city name", value="Ho Chi Minh")
+    fetch = st.button("Fetch & Predict")
+
+    def convert_cloud_to_oktas(cloud_percent):
+        if cloud_percent is None:
+            return None
+        if cloud_percent == 0:
+            return 0
+        elif cloud_percent <= 12.5:
+            return 1
+        elif cloud_percent <= 25:
+            return 2
+        elif cloud_percent <= 37.5:
+            return 3
+        elif cloud_percent <= 50:
+            return 4
+        elif cloud_percent <= 62.5:
+            return 5
+        elif cloud_percent <= 75:
+            return 6
+        elif cloud_percent <= 87.5:
+            return 7
+        else:
+            return 8
+
+    if fetch:
+        API_KEY = "92f14b27fd924631b7c183633250106"
+        try:
+            url = "http://api.weatherapi.com/v1/forecast.json"
+            params = {'key': API_KEY, 'q': city_name, 'days': 1, 'aqi': 'no', 'alerts': 'no'}
+            forecast = requests.get(url, params=params).json()
+            current = forecast['current']
+            today = forecast['forecast']['forecastday'][0]['day']
+            hours = forecast['forecast']['forecastday'][0]['hour']
+            h9 = next((h for h in hours if datetime.fromisoformat(h['time']).hour == 9), None)
+            h15 = next((h for h in hours if datetime.fromisoformat(h['time']).hour == 15), None)
+
+            data = {
+                "MinTemp": today['mintemp_c'],
+                "Rainfall": today['totalprecip_mm'],
+                "RainToday": 1 if today['totalprecip_mm'] > 0 else 0,
+                "WindGustSpeed": current['gust_kph'],
+                "WindSpeed9am": h9['wind_kph'] if h9 else None,
+                "WindSpeed3pm": h15['wind_kph'] if h15 else None,
+                "Humidity9am": h9['humidity'] if h9 else None,
+                "Humidity3pm": h15['humidity'] if h15 else None,
+                "Cloud9am": convert_cloud_to_oktas(h9['cloud']) if h9 else None,
+                "Cloud3pm": convert_cloud_to_oktas(h15['cloud']) if h15 else None
+            }
+
+            df_input = pd.DataFrame([data])
+            df_input = fill_missing_with_defaults(df_input)
+            st.write("📄 Fetched weather data:", df_input)
+
+            X = df_input[selected_features]
+            X["RainToday"] = X["RainToday"].map({"Yes": 1, "No": 0}) if X["RainToday"].dtype == object else X["RainToday"]
+            for col in X.columns:
+                if col in label_encoders and X[col].dtype == object:
+                    X[col] = label_encoders[col].transform(X[col].astype(str))
+
+            X_scaled = scaler.transform(X)
+            X_pca = pca.transform(X_scaled)
+            model = rf_model
+            prediction = model.predict(X_pca)[0]
+            proba = model.predict_proba(X_pca)[0]
+            emoji = "☔" if prediction == 1 else "🌤️"
+            label = {0: "No", 1: "Yes"}[prediction]
+
+            st.success(f"🌦️ RainTomorrow prediction for {city_name}: **{emoji} {label}**")
+            st.subheader("🧪 Probability:")
+            st.bar_chart({"No": proba[0], "Yes": proba[1]})
+
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
