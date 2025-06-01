@@ -7,26 +7,16 @@ st.set_page_config(page_title="🌧️ Predict Rain App", layout="centered")
 st.title("🌧️ Predict Rain (RainTomorrow)")
 
 # Load models and encoders
-@st.cache_resource
-def load_models():
-    return {
-        "scaler": joblib.load("saved_models/scaler.joblib"),
-        "pca": joblib.load("saved_models/pca_transformer.joblib"),
-        "rf": joblib.load("saved_models/random_forest_classifier_pca.joblib"),
-        "dt": joblib.load("saved_models/decision_tree_classifier_pca.joblib"),
-        "encoders": joblib.load("saved_models/label_encoders.joblib"),
-        "acc_rf": joblib.load("saved_models/accuracy_rf.joblib"),
-        "acc_dt": joblib.load("saved_models/accuracy_dt.joblib"),
-    }
+scaler = joblib.load("saved_models/scaler.joblib")
+pca = joblib.load("saved_models/pca_transformer.joblib")
+rf_model = joblib.load("saved_models/random_forest_classifier_pca.joblib")
+dt_model = joblib.load("saved_models/decision_tree_classifier_pca.joblib")
+label_encoders = joblib.load("saved_models/label_encoders.joblib")
+rain_encoder = label_encoders.get("RainTomorrow", None)
 
-models = load_models()
-scaler = models["scaler"]
-pca = models["pca"]
-rf_model = models["rf"]
-dt_model = models["dt"]
-label_encoders = models["encoders"]
-accuracy_rf = models["acc_rf"]
-accuracy_dt = models["acc_dt"]
+# Load model accuracy
+accuracy_rf = joblib.load("saved_models/accuracy_rf.joblib")
+accuracy_dt = joblib.load("saved_models/accuracy_dt.joblib")
 
 # Default values for all possible inputs
 default_values_full = {
