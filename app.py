@@ -58,29 +58,34 @@ def fill_missing_with_defaults(df):
     return df
 
 if input_mode == "Manual input":
+    def parse_float(value):
+        try:
+            return float(value)
+        except ValueError:
+            return None
     with st.form("input_form"):
         st.subheader("🔢 Input weather forecast data:")
-        location = st.text_input("Location", "Sydney")
-        min_temp = st.number_input("MinTemp (°C)", value=15.1)
-        max_temp = st.number_input("MaxTemp (°C)", value=23.0)
-        rainfall = st.number_input("Rainfall (mm)", value=0.4)
-        evaporation = st.number_input("Evaporation (mm)", value=3.2)
-        sunshine = st.number_input("Sunshine (hours)", value=9.8)
+        location = st.text_input("Location", "")
+        min_temp = parse_float(st.text_input("MinTemp (°C)", ""))
+        max_temp = parse_float(st.text_input("MaxTemp (°C)", ""))
+        rainfall = parse_float(st.text_input("Rainfall (mm)", ""))
+        evaporation = parse_float(st.text_input("Evaporation (mm)", ""))
+        sunshine = parse_float(st.text_input("Sunshine (hours)", ""))
         wind_gust_dir = st.text_input("WindGustDir", "NW")
-        wind_gust_speed = st.number_input("WindGustSpeed (km/h)", value=70.0)
+        wind_gust_speed = parse_float(st.text_input("WindGustSpeed", ""))
         wind_dir_9am = st.text_input("WindDir9am", "WNW")
         wind_dir_3pm = st.text_input("WindDir3pm", "WNW")
-        wind_speed_9am = st.number_input("WindSpeed9am", value=15.0)
-        wind_speed_3pm = st.number_input("WindSpeed3pm", value=22.0)
-        humidity_9am = st.number_input("Humidity9am (%)", value=67.0)
-        humidity_3pm = st.number_input("Humidity3pm (%)", value=42.0)
-        pressure_9am = st.number_input("Pressure9am (hPa)", value=1007.9)
-        pressure_3pm = st.number_input("Pressure3pm (hPa)", value=1007.2)
-        cloud_9am = st.slider("Cloud9am (0-8)", 0, 8, 6)
-        cloud_3pm = st.slider("Cloud3pm (0-8)", 0, 8, 2)
-        temp_9am = st.number_input("Temp9am (°C)", value=20.0)
-        temp_3pm = st.number_input("Temp3pm (°C)", value=21.2)
-        rain_today = st.selectbox("RainToday", ["No", "Yes"])
+        wind_speed9am = parse_float(st.text_input("WindSpeed9am", ""))
+        wind_speed3pm = parse_float(st.text_input("WindSpeed3pm", ""))
+        humidity9am = parse_float(st.text_input("Humidity9am (%)", ""))
+        humidity3pm = parse_float(st.text_input("Humidity3pm (%)", ""))
+        pressure_9am = parse_float(st.text_input("Pressure9am (hPa)", ""))
+        pressure_3pm = parse_float(st.text_input("Pressure3pm (hPa)", ""))
+        cloud9am = parse_float(st.text_input("Cloud9am (0-8)", ""))
+        cloud3pm = parse_float(st.text_input("Cloud3pm (0-8)", ""))
+        temp_9am = parse_float(st.text_input("Temp9am (°C)", ""))
+        temp_3pm = parse_float(st.text_input("Temp3pm (°C)", ""))
+        rain_today = st.selectbox("RainToday", ["", "Yes", "No"])
         model_type = st.selectbox("🧠Select a model", ["Random Forest", "Decision Tree"])
         submit = st.form_submit_button("Predict")
 
