@@ -41,22 +41,39 @@ with st.form("input_form"):
     rain_today = st.selectbox("RainToday", ["No", "Yes"])
     model_type = st.selectbox("🧠Select a model", ["Random Forest", "Decision Tree"])
     submit = st.form_submit_button("Predict")
-
 if submit:
-    input_df = pd.DataFrame([[
-        location, min_temp, max_temp, rainfall, evaporation, sunshine,
-        wind_gust_dir, wind_gust_speed, wind_dir_9am, wind_dir_3pm,
-        wind_speed_9am, wind_speed_3pm, humidity_9am, humidity_3pm,
-        pressure_9am, pressure_3pm, cloud_9am, cloud_3pm, temp_9am, temp_3pm,
-        rain_today
-    ]], columns=[
-        'Location', 'MinTemp', 'MaxTemp', 'Rainfall', 'Evaporation', 'Sunshine',
-        'WindGustDir', 'WindGustSpeed', 'WindDir9am', 'WindDir3pm',
-        'WindSpeed9am', 'WindSpeed3pm', 'Humidity9am', 'Humidity3pm',
-        'Pressure9am', 'Pressure3pm', 'Cloud9am', 'Cloud3pm',
-        'Temp9am', 'Temp3pm', 'RainToday'
-    ])
-    # Map 'Yes'/'No' to 1/0 for binary columns
+    # Tạo DataFrame đầy đủ từ form nhập liệu
+    full_input = pd.DataFrame([{
+        "Location": location,
+        "MinTemp": min_temp,
+        "MaxTemp": max_temp,
+        "Rainfall": rainfall,
+        "Evaporation": evaporation,
+        "Sunshine": sunshine,
+        "WindGustDir": wind_gust_dir,
+        "WindGustSpeed": wind_gust_speed,
+        "WindDir9am": wind_dir_9am,
+        "WindDir3pm": wind_dir_3pm,
+        "WindSpeed9am": wind_speed_9am,
+        "WindSpeed3pm": wind_speed_3pm,
+        "Humidity9am": humidity_9am,
+        "Humidity3pm": humidity_3pm,
+        "Pressure9am": pressure_9am,
+        "Pressure3pm": pressure_3pm,
+        "Cloud9am": cloud_9am,
+        "Cloud3pm": cloud_3pm,
+        "Temp9am": temp_9am,
+        "Temp3pm": temp_3pm,
+        "RainToday": rain_today
+    }])
+
+    # Chọn đúng 10 feature có tương quan dương, đúng thứ tự huấn luyện
+    selected_features = [
+        "Humidity3pm", "RainToday", "Cloud3pm", "Cloud9am", "Humidity9am",
+        "Rainfall", "WindGustSpeed", "WindSpeed9am", "MinTemp", "WindSpeed3pm"
+    ]
+    input_df = full_input[selected_features].copy()
+
     if 'RainToday' in input_df.columns:
         input_df['RainToday'] = input_df['RainToday'].map({'Yes': 1, 'No': 0})
 
@@ -73,4 +90,4 @@ if submit:
     result_label = rain_encoder.inverse_transform([prediction])[0] if rain_encoder else str(prediction)
 
     emoji = "☔" if prediction == 1 else "🌤️"
-    st.success(f"🎯 Weather prediction result: **{{emoji}} {{result_label}}** (by {{model_type}})")
+    st.success(f"🎯 Weather prediction result: **{emoji} {result_label}** (by {model_type})")
