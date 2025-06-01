@@ -9,7 +9,7 @@ st.set_page_config(page_title="🌧️ Predict Rain App", layout="centered")
 st.title("🌧️ Predict Rain (RainTomorrow)")
 
 # Load models and encoders
-s@st.cache_resource
+@st.cache_resource
 def load_models():
     return {
         "scaler": joblib.load("saved_models/scaler.joblib"),
