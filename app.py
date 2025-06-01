@@ -19,25 +19,25 @@ rain_encoder = label_encoders.get("RainTomorrow", None)
 with st.form("input_form"):
     st.subheader("🔢 Input weather forecast data:")
     location = st.text_input("Location", "Sydney")
-    min_temp = st.number_input("MinTemp (°C)", value=10.0)
-    max_temp = st.number_input("MaxTemp (°C)", value=25.0)
-    rainfall = st.number_input("Rainfall (mm)", value=5.0)
-    evaporation = st.number_input("Evaporation (mm)", value=7.0)
-    sunshine = st.number_input("Sunshine (hours)", value=7.0)
-    wind_gust_dir = st.text_input("WindGustDir", "W")
-    wind_gust_speed = st.number_input("WindGustSpeed (km/h)", value=30.0)
-    wind_dir_9am = st.text_input("WindDir9am", "W")
+    min_temp = st.number_input("MinTemp (°C)", value=15.1)
+    max_temp = st.number_input("MaxTemp (°C)", value=23.0)
+    rainfall = st.number_input("Rainfall (mm)", value=0.4)
+    evaporation = st.number_input("Evaporation (mm)", value=3.2)
+    sunshine = st.number_input("Sunshine (hours)", value=9.8)
+    wind_gust_dir = st.text_input("WindGustDir", "NW")
+    wind_gust_speed = st.number_input("WindGustSpeed (km/h)", value=70.0)
+    wind_dir_9am = st.text_input("WindDir9am", "WNW")
     wind_dir_3pm = st.text_input("WindDir3pm", "WNW")
     wind_speed_9am = st.number_input("WindSpeed9am", value=15.0)
-    wind_speed_3pm = st.number_input("WindSpeed3pm", value=20.0)
-    humidity_9am = st.number_input("Humidity9am (%)", value=65.0)
-    humidity_3pm = st.number_input("Humidity3pm (%)", value=55.0)
-    pressure_9am = st.number_input("Pressure9am (hPa)", value=1012.0)
-    pressure_3pm = st.number_input("Pressure3pm (hPa)", value=1010.0)
-    cloud_9am = st.slider("Cloud9am (0-8)", 0, 8, 3)
-    cloud_3pm = st.slider("Cloud3pm (0-8)", 0, 8, 4)
+    wind_speed_3pm = st.number_input("WindSpeed3pm", value=22.0)
+    humidity_9am = st.number_input("Humidity9am (%)", value=67.0)
+    humidity_3pm = st.number_input("Humidity3pm (%)", value=42.0)
+    pressure_9am = st.number_input("Pressure9am (hPa)", value=1007.9)
+    pressure_3pm = st.number_input("Pressure3pm (hPa)", value=1007.2)
+    cloud_9am = st.slider("Cloud9am (0-8)", 0, 8, 6)
+    cloud_3pm = st.slider("Cloud3pm (0-8)", 0, 8, 2)
     temp_9am = st.number_input("Temp9am (°C)", value=20.0)
-    temp_3pm = st.number_input("Temp3pm (°C)", value=23.0)
+    temp_3pm = st.number_input("Temp3pm (°C)", value=21.2)
     rain_today = st.selectbox("RainToday", ["No", "Yes"])
     model_type = st.selectbox("🧠Select a model", ["Random Forest", "Decision Tree"])
     submit = st.form_submit_button("Predict")
@@ -69,8 +69,8 @@ if submit:
 
     # Chọn đúng 10 feature có tương quan dương, đúng thứ tự huấn luyện
     selected_features = [
-        "Humidity3pm", "RainToday", "Cloud3pm", "Cloud9am", "Humidity9am",
-        "Rainfall", "WindGustSpeed", "WindSpeed9am", "MinTemp", "WindSpeed3pm"
+        'Humidity3pm' 'RainToday' 'Cloud3pm' 'Humidity9am' 'Cloud9am' 'Rainfall'
+        'WindGustSpeed' 'WindSpeed9am' 'WindSpeed3pm' 'MinTemp'    
     ]
     input_df = full_input[selected_features].copy()
 
