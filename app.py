@@ -82,12 +82,24 @@ if submit:
             input_df[col] = label_encoders[col].transform(input_df[col].astype(str))
     
     # Scale and PCA
-    X_scaled = scaler.transform(input_df)
-    X_pca = pca.transform(X_scaled)
+    try:
+        X_scaled = scaler.transform(input_df)
+        X_pca = pca.transform(X_scaled)
 
-    model = rf_model if model_type == "Random Forest" else dt_model
-    prediction = model.predict(X_pca)[0]
-    result_label = {0: "No", 1: "Yes"}.get(prediction, str(prediction))
-    
-    emoji = "☔" if prediction == 1 else "🌤️"
-    st.success(f"🎯 Weather prediction result: **{emoji} {result_label}** (by {model_type})")
+        model = rf_model if model_type == "Random Forest" else dt_model
+        prediction = model.predict(X_pca)[0]
+        result_label = {0: "No", 1: "Yes"}.get(prediction, str(prediction))
+        emoji = "☔" if prediction == 1 else "🌤️"
+
+        st.success(f"🎯 Weather prediction result: **{emoji} {result_label}** (by {model_type})")
+
+        # Hiện độ chính xác
+        st.info(f"📊 Model accuracy on test data: **{accuracy*100:.2f}%**")
+
+        # Hiện biểu đồ xác suất
+        proba = model.predict_proba(X_pca)[0]
+        st.subheader("🧪 Probability of RainTomorrow:")
+        st.bar_chart({"No": proba[0], "Yes": proba[1]})
+
+    except Exception as e:
+        st.error(f"❌ Prediction failed: {e}")
