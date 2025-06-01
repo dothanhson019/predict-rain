@@ -153,9 +153,9 @@ if input_mode == "Manual input":
             proba = model.predict_proba(X_pca)[0]
             st.subheader("🧪 Probability of RainTomorrow:")
             st.bar_chart({"No": proba[0], "Yes": proba[1]})
-        except Exception as e:
-            st.error(f"❌ Error fetching weather: {e}")
-            st.stop()
+    except Exception as e:
+        st.error(f"❌ Error fetching weather: {e}")
+        st.stop()
 elif input_mode == "Upload CSV file":
     uploaded_file = st.file_uploader("📁 Upload a CSV file with input data", type=["csv"])
     model_type = st.selectbox("🧠Select a model", ["Random Forest", "Decision Tree"])
@@ -242,7 +242,15 @@ elif input_mode == "Fetch from WeatherAPI":
                 params["dt"] = selected_date.strftime("%Y-%m-%d")
 
             url = f"{base_url}/{endpoint}"
-            res = requests.get(url, params=params).json()
+            response = requests.get(url, params=params)
+            if response.status_code != 200:
+                st.error(f"❌ WeatherAPI Error {response.status_code}: {response.reason}")
+                st.stop()
+
+            res = response.json()
+            if "error" in res:
+                st.error(f"❌ WeatherAPI returned error: {res['error'].get('message', 'Unknown error')}")
+                st.stop()
 
             current = res["current"] if not use_historical else None
             day = res["forecast"]["forecastday"][0]["day"]
